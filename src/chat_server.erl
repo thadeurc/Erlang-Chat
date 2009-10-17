@@ -16,7 +16,7 @@
 
 start() ->
     start_server(),
-    lib_chan:start_server("chat.conf").
+    lib_chan:start_server("/Users/thadeurc/Erlang-Chat/src/chat.conf").
 
 start_server() ->
     register(chat_server, 
@@ -36,13 +36,17 @@ server_loop(L) ->
 		    Pid ! {login, Channel, Nick},
 		    server_loop(L);
 		error ->
+			ServerPid = self(),
 		    Pid = spawn_link(fun() ->
-					     chat_group:start(Channel, Nick) 
+					     chat_group:start(ServerPid, Channel, Nick) 
 				     end),
 		    server_loop([{Group,Pid}|L])
 	    end;
 	{mm_closed, _} ->
-	    server_loop(L); 
+	    server_loop(L);
+	{send, {From, C, list_groups}} ->
+		From ! {list_groups_reply, C, L},
+		server_loop(L);
 	{'EXIT', Pid, allGone} ->
 	    L1 = remove_group(Pid, L),
 	    server_loop(L1);
