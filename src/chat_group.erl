@@ -11,14 +11,14 @@
 -import(lib_chan_mm, [send/2, controller/2]).
 -import(lists, [foreach/2, reverse/2]).
 
--export([start/2]).
+-export([start/3]).
 
-start(C, Nick) ->
+start(ServerPid, C, Nick) ->
     process_flag(trap_exit, true),
     controller(C, self()),
     send(C, ack),
     self() ! {chan, C, {relay, Nick, "I'm starting the group"}},
-    group_controller([{C,Nick}]).
+    group_controller(ServerPid, [{C,Nick}]).
 
 
 
@@ -28,24 +28,33 @@ delete(_, [], L)               -> {"????", L}.
 
 
 
-group_controller([]) ->
+group_controller(_ServerPid, []) ->
     exit(allGone);
-group_controller(L) ->
+group_controller(ServerPid, L) ->
     receive
 	{chan, C, {relay, Nick, Str}} ->
 	    foreach(fun({Pid,_}) -> send(Pid, {msg,Nick,C,Str}) end, L),
-	    group_controller(L);
+	    group_controller(ServerPid, L);
 	{login, C, Nick} ->
 	    controller(C, self()),
 	    send(C, ack),
 	    self() ! {chan, C, {relay, Nick, "I'm joining the group"}},
-	    group_controller([{C,Nick}|L]);
+	    group_controller(ServerPid, [{C,Nick}|L]);
 	{chan_closed, C} ->
 	    {Nick, L1} = delete(C, L, []),
 	    self() ! {chan, C, {relay, Nick, "I'm leaving the group"}},
-	    group_controller(L1);
+	    group_controller(ServerPid, L1);
+	{chan, C, {list_all, _}} ->
+		send(C, {group_members, L}),
+		group_controller(ServerPid, L);
+	{chan, C, {list_groups}} ->
+		lib_chan_mm:send(ServerPid, {self(), C, list_groups}),
+		group_controller(ServerPid, L);	
+	{list_groups_reply, C, Groups} ->
+		send(C, {list_groups_reply, Groups}),
+		group_controller(ServerPid, L);
 	Any ->
 	    io:format("group controller received Msg=~p~n", [Any]),
-	    group_controller(L)
+	    group_controller(ServerPid, L)
     end.
 

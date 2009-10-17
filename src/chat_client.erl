@@ -21,8 +21,8 @@ start() ->
 
 test() ->
     connect("localhost", 2223, "AsDT67aQ", "general", "joe"),
-    connect("localhost", 2223, "AsDT67aQ", "general", "jane"),
-    connect("localhost", 2223, "AsDT67aQ", "general", "jim"),
+    connect("localhost", 2223, "AsDT67aQ", "general2", "jane"),
+    connect("localhost", 2223, "AsDT67aQ", "general2", "jim"),
     connect("localhost", 2223, "AsDT67aQ", "general", "sue").
 	   
 
@@ -46,7 +46,7 @@ disconnected(Widget, Group, Nick) ->
 	{connected, MM} ->
 	    insert_str(Widget, "connected to server\nsending data\n"),
 	    lib_chan_mm:send(MM, {login, Group, Nick}),
-	    wait_login_response(Widget, MM);
+	    wait_login_response(Widget, MM, Group);
 	{Widget, destroyed} ->
 	    exit(died);
 	{status, S} ->
@@ -59,36 +59,68 @@ disconnected(Widget, Group, Nick) ->
 
 
 
-wait_login_response(Widget, MM) ->
+wait_login_response(Widget, MM, Group) ->
     receive
 	{chan, MM, ack} ->
-	    active(Widget, MM);
+	    active(Widget, MM, Group);
 	Other ->
 	    io:format("chat_client login unexpected:~p~n",[Other]),
-	    wait_login_response(Widget, MM)
+	    wait_login_response(Widget, MM, Group)
     end. 
 
 
 
-active(Widget, MM) ->
+active(Widget, MM, Group) ->
      receive
 	 {Widget, Nick, Str} ->
 	     lib_chan_mm:send(MM, {relay, Nick, Str}),
-	     active(Widget, MM);
+	     active(Widget, MM, Group);
 	 {chan, MM, {msg, From, Pid, Str}} ->
-	     insert_str(Widget, [From,"@",pid_to_list(Pid)," ", Str, "\n"]),
-	     active(Widget, MM);
+	     insert_str(Widget, ["(",Group, ")", From,"@",pid_to_list(Pid)," ", Str, "\n"]),
+		 validate_input(Str, MM, Group),
+	     active(Widget, MM, Group);
+	 {chan, MM, {group_members, L}} ->
+		 T = [names(X) || X <- L],
+		 insert_str(Widget, ["(",Group, ") members: " ++ T, "\n"]),
+		 active(Widget, MM, Group);
+	{chan, MM, {list_groups_reply, L}} ->
+		 T = [groups(X) || X <- L],
+		 insert_str(Widget, ["Groups: " ++ T, "\n"]),
+		 active(Widget, MM, Group);
 	 {'EXIT',Widget,windowDestroyed} ->
 	     lib_chan_mm:close(MM);
 	 {close, MM} ->
 	     exit(serverDied);
 	 Other ->
 	     io:format("chat_client active unexpected:~p~n",[Other]),
-	     active(Widget, MM)
+	     active(Widget, MM, Group)
      end. 
 
+names({_, Name}) ->
+	["\n\t",Name].
+
+groups({Name, _}) ->
+	["\n\t", Name].
 
 
+validate_input(Str, MM, Group) ->
+	case string:str(Str, "show_group_members") > 0 of
+		true ->
+			lib_chan_mm:send(MM, {list_all, Group});
+		false ->
+			case string:str(Str, "show_groups") > 0 of  
+				true -> 
+					lib_chan_mm:send(MM, {list_groups});
+				false -> 
+					void
+			end
+	end.
+
+
+
+
+
+	
 start_connector(Host, Port, Pwd) ->
     S = self(),
     spawn_link(fun() -> try_to_connect(S, Host, Port, Pwd) end).
