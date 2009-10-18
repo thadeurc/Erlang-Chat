@@ -12,7 +12,7 @@
 	[get_state/1, insert_str/2, set_prompt/2, set_state/2, 
 	 set_title/2, set_handler/2, update_state/3]).
 
--export([start/0, test/0, connect/5]).
+-export([start/0, test/0, connect/5, parseOneToOneMsg/1]).
 
 
 start() -> 
@@ -72,9 +72,15 @@ wait_login_response(Widget, MM, Group) ->
 
 active(Widget, MM, Group) ->
      receive
-	 {Widget, Nick, Str} ->
-	     lib_chan_mm:send(MM, {relay, Nick, Str}),
-	     active(Widget, MM, Group);
+	 {Widget, Nick, Str} ->	
+		 case is_user_to_user_msg(Str) of
+			 true -> 
+				 {ToWhom, Msg} = parseOneToOneMsg(Str),
+				 lib_chan_mm:send(MM, {user_to_user, Nick, ToWhom, Msg});
+		 	 false -> 
+				 lib_chan_mm:send(MM, {relay, Nick, Str})
+		 end,
+		 active(Widget, MM, Group);
 	 {chan, MM, {msg, From, Pid, Str}} ->
 	     insert_str(Widget, ["(",Group, ")", From,"@",pid_to_list(Pid)," ", Str, "\n"]),
 		 validate_input(Str, MM, Group),
@@ -106,19 +112,17 @@ groups({Name, _}) ->
 validate_input(Str, MM, Group) ->
 	case string:str(Str, "show_group_members") > 0 of
 		true ->
-			lib_chan_mm:send(MM, {list_all, Group});
+			lib_chan_mm:send(MM, {list_all, Group}),
+			true;	
 		false ->
 			case string:str(Str, "show_groups") > 0 of  
 				true -> 
-					lib_chan_mm:send(MM, {list_groups});
+					lib_chan_mm:send(MM, {list_groups}),
+					true;
 				false -> 
-					void
+					false
 			end
 	end.
-
-
-
-
 
 	
 start_connector(Host, Port, Pwd) ->
@@ -152,3 +156,22 @@ parse_command(Str) -> skip_to_gt(Str).
 skip_to_gt(">" ++ T) -> T;
 skip_to_gt([_|T])    -> skip_to_gt(T);
 skip_to_gt([])       -> exit("no >").
+
+is_user_to_user_msg(Str) ->
+	{match, L} = regexp:matches(Str, "\s*to:\s*[a-zA-Z_][0-9a-zA-Z_]+\s*!.*"),
+	length(L) > 0.
+
+
+
+%% expected Str in format to:<user> ! message.
+%% e.g: to:jow ! Hi Man!
+parseOneToOneMsg(Str) ->
+	CleanStr = string:strip(Str),
+	BeginWho = string:str(CleanStr, "to:") + 3,
+	EndWho = string:str(CleanStr, "!") - 1,
+	WhoStr = string:strip(string:sub_string(CleanStr, BeginWho, EndWho)),
+	Msg = string:strip(string:sub_string(CleanStr, EndWho + 2)),
+	{WhoStr, Msg}.
+
+	
+	

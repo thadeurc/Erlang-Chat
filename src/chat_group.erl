@@ -33,7 +33,11 @@ group_controller(_ServerPid, []) ->
 group_controller(ServerPid, L) ->
     receive
 	{chan, C, {relay, Nick, Str}} ->
-	    foreach(fun({Pid,_}) -> send(Pid, {msg,Nick,C,Str}) end, L),
+		foreach(fun({Pid,_}) -> send(Pid, {msg,Nick,C,Str}) end, L),		
+	    group_controller(ServerPid, L);
+	{chan, C, {user_to_user, Nick, ToWhom, Str}} ->
+		ToList = filter_list(L, ToWhom, []),
+		foreach(fun({Pid, _}) -> send(Pid, {msg,Nick,C,Str}) end, [{C, Nick}] ++ ToList),
 	    group_controller(ServerPid, L);
 	{login, C, Nick} ->
 	    controller(C, self()),
@@ -58,3 +62,6 @@ group_controller(ServerPid, L) ->
 	    group_controller(ServerPid, L)
     end.
 
+filter_list([],_,L) -> L;
+filter_list([{Pid, Name}|T], ToWhom, R) when Name =:= ToWhom -> filter_list(T, ToWhom, [{Pid, Name}] ++ R);
+filter_list([_H|T], ToWhom, R) -> filter_list(T, ToWhom, R).
