@@ -48,14 +48,20 @@ group_controller(ServerPid, L) ->
 	    {Nick, L1} = delete(C, L, []),
 	    self() ! {chan, C, {relay, Nick, "I'm leaving the group"}},
 	    group_controller(ServerPid, L1);
-	{chan, C, {list_all, _}} ->
-		send(C, {group_members, L}),
+	{chan, C, {list_all, Group}} ->
+		lib_chan_mm:send(ServerPid, {self(), C, list_all, Group}),
 		group_controller(ServerPid, L);
 	{chan, C, {list_groups}} ->
 		lib_chan_mm:send(ServerPid, {self(), C, list_groups}),
 		group_controller(ServerPid, L);	
 	{list_groups_reply, C, Groups} ->
 		send(C, {list_groups_reply, Groups}),
+		group_controller(ServerPid, L);
+	{list_all_reply, C, []} ->
+		send(C, {group_members, L}),
+		group_controller(ServerPid, L);
+	{list_all_reply, C, Err} ->
+		send(C, {group_members, Err}),
 		group_controller(ServerPid, L);
 	Any ->
 	    io:format("group controller received Msg=~p~n", [Any]),

@@ -12,7 +12,7 @@
 	[get_state/1, insert_str/2, set_prompt/2, set_state/2, 
 	 set_title/2, set_handler/2, update_state/3]).
 
--export([start/0, test/0, connect/5, parseOneToOneMsg/1]).
+-export([start/0, test/0, connect/5]).
 
 
 start() -> 
@@ -112,7 +112,11 @@ groups({Name, _}) ->
 validate_input(Str, MM, Group) ->
 	case string:str(Str, "show_group_members") > 0 of
 		true ->
-			lib_chan_mm:send(MM, {list_all, Group}),
+			NGroup = get_group_name(Str),
+			case NGroup =:= undefined of
+				true ->lib_chan_mm:send(MM, {list_all,Group});
+				false ->lib_chan_mm:send(MM, {list_all,NGroup})
+			end,
 			true;	
 		false ->
 			case string:str(Str, "show_groups") > 0 of  
@@ -161,6 +165,12 @@ is_user_to_user_msg(Str) ->
 	{match, L} = regexp:matches(Str, "\s*to:\s*[a-zA-Z_][0-9a-zA-Z_]+\s*!.*"),
 	length(L) > 0.
 
+get_group_name(Str) ->
+	Pos = string:str(Str, ":"),
+	case Pos > 0 of
+		false -> undefined;
+		true -> string:strip(string:sub_string(Str, Pos + 1))
+	end.
 
 
 %% expected Str in format to:<user> ! message.

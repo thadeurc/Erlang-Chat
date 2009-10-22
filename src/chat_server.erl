@@ -47,6 +47,12 @@ server_loop(L) ->
 	{send, {From, C, list_groups}} ->
 		From ! {list_groups_reply, C, L},
 		server_loop(L);
+	{send, {From, C, list_all, Group}} ->
+		case lookup(Group,L) of
+			{ok, Pid} -> Pid ! {list_all_reply, C, []};
+			error -> From ! {list_all_reply, C, [{"reply","invalid_group"}]}
+		end,	
+		server_loop(L);	
 	{'EXIT', Pid, allGone} ->
 	    L1 = remove_group(Pid, L),
 	    server_loop(L1);
