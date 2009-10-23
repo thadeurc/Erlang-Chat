@@ -43,10 +43,13 @@ group_controller(ServerPid, L) ->
 	    controller(C, self()),
 	    send(C, ack),
 	    self() ! {chan, C, {relay, Nick, "I'm joining the group"}},
-	    group_controller(ServerPid, [{C,Nick}|L]);
+		L1 = [{C,Nick}|L],
+		foreach(fun({Pid,_}) -> send(Pid, {new_list,L1}) end, L1),
+	    group_controller(ServerPid, L1);
 	{chan_closed, C} ->
 	    {Nick, L1} = delete(C, L, []),
 	    self() ! {chan, C, {relay, Nick, "I'm leaving the group"}},
+		foreach(fun({Pid,_}) -> send(Pid, {new_list,L1}) end, L1),
 	    group_controller(ServerPid, L1);
 	{chan, C, {list_all, Group}} ->
 		lib_chan_mm:send(ServerPid, {self(), C, list_all, Group}),

@@ -10,19 +10,25 @@
 
 -import(io_widget, 
 	[get_state/1, insert_str/2, set_prompt/2, set_state/2, 
-	 set_title/2, set_handler/2, update_state/3]).
+	 set_title/2, set_handler/2, update_state/3, update_list/2]).
 
--export([start/0, test/0, connect/5]).
-
+-export([start/0, start/2, test/0, connect/5]).
 
 start() -> 
     connect("localhost", 2223, "AsDT67aQ", "general", "joe").
+
+start(Group, User) -> 
+    connect("localhost", 2223, "AsDT67aQ", Group, User).
+
+
 
 
 test() ->
     connect("localhost", 2223, "AsDT67aQ", "general", "joe"),
     connect("localhost", 2223, "AsDT67aQ", "general2", "jane"),
     connect("localhost", 2223, "AsDT67aQ", "general2", "jim"),
+	connect("localhost", 2223, "AsDT67aQ", "general", "john"),
+    connect("localhost", 2223, "AsDT67aQ", "general2", "peter"),
     connect("localhost", 2223, "AsDT67aQ", "general", "sue").
 	   
 
@@ -36,7 +42,7 @@ handler(Host, Port, HostPsw, Group, Nick) ->
     set_state(Widget, Nick),
     set_prompt(Widget, [Nick, " > "]),
     set_handler(Widget, fun parse_command/1),
-    start_connector(Host, Port, HostPsw),    
+    start_connector(Host, Port, HostPsw), 
     disconnected(Widget, Group, Nick).
 
 
@@ -89,6 +95,10 @@ active(Widget, MM, Group) ->
 		 T = [names(X) || X <- L],
 		 insert_str(Widget, ["(",Group, ") members: " ++ T, "\n"]),
 		 active(Widget, MM, Group);
+	{chan, MM, {new_list, L}} ->
+		 T = [names(X) || X <- L],
+		 update_list(Widget, T),
+		 active(Widget, MM, Group);	 
 	{chan, MM, {list_groups_reply, L}} ->
 		 T = [groups(X) || X <- L],
 		 insert_str(Widget, ["Groups: " ++ T, "\n"]),

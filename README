@@ -1,0 +1,49 @@
+MAC5765 - Tópicos em Sistemas de Computação - Segundo Semestre de 2009
+	Programação Funcional Contemporânea
+
+EP1 - Exercício-Programa 1: Melhorias no IRC Lite do Armstrong
+	
+Alunos: Sergio Lopes e Thadeu de Russo e Carmo
+
+Instruções
+----------
+Para compilar os arquivos fontes erlang, basta chamar no diretório ep1-sergio-thadeu o comando make. Uma vez que este comando tenha sido executado,
+os arquivos *.beam serão criados. Além disso, o arquivo lib_chan.conf será copiado para ${HOME}/.erlang.config.
+
+Para iniciar a execução do servidor de chat, basta executar o comando make chat_server.
+
+Para iniciar a execução dos clientes do chat, existem 3 alternativas diferentes:
+
+	1) make chat_client. Esta chamada irá criar 6 clientes divididos em 2 groups (general, e general2);
+	2) No diretório do ep, executar erl para iniciar a execução do erlang, e logo em seguida chamar chat_client:start(). Isso irá executar
+		um cliente com o nome joe, no grupo general;
+	3) No diretório do ep, executar erl para iniciar a execução do erlang, e logo em seguida chamar chat_client:start(Grupo, Usuario), onde
+		Grupo é o grupo que se deseja entrar, e Usuario, o nome do usuário. E.g.: chat_client:start("esportes", "Pedro").
+		
+Segue abaixo as intruções específicas para cada um dos itens solicitados:
+
+1- "Improve the graphics widged, adding a side panel to list the names of the people in the current group."
+	Basta entrar na aplicação que o painel será mostrado ao lado direito da janela de conversa. O painel é atualiado automaticamente para novos usuários
+que façam login no grupo, ou deixem o mesmo. 
+
+2- "Add code to show the names of all people in a group."
+	Na caixa de escrita para envio de mensagem, basta digitar o comando : show_group_members:<grupo>, onde <grupo> é o nome do grupo que se deseja ver os
+integrantes. E.g.: jow> show_group_members:general. O resultado é listado na janela de conversa.  
+
+3- "Add code to list all the groups."
+	Na caixa de escrita para envio de mensagem, basta digitar o comando : show_groups E.g.: jow> show_groups. O resultado é listado na janela de conversa.
+
+4- "Add person to person conversations".
+	Na caixa de escrita para envio de mensagem, basta digitar o comando : to:<pessoa> ! <mensagem>, onde <pessoa> é uma <pessoa> no grupo corrente e <mensagem>
+é a própria mensagem. E.g.: to:joe ! ola, como vai? O resultado é mostrado na janela de quem recebeu e enviou a mensagem. 
+
+5- "Add code so that the server machine does not run the group controller but so that this functionality is provided by the first user to join the system in a 
+particular group." 
+	** Este item nao foi implementado.
+
+
+Comentários gerais:
+-------------------
+
+Os arquivos da biblioteca de comunicação (lib_*), não sofreram nenhum tipo de alteração. Estas se concentram nos arquivos io_widget.erl, chat_server.erl, 
+chat_client.erl, chat_group_controller.erl. Basicamente novas mensagens foram adicionadas, e seu tratamento.

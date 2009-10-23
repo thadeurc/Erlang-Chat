@@ -16,7 +16,7 @@
 
 start() ->
     start_server(),
-    lib_chan:start_server("/Users/thadeurc/Erlang-Chat/src/chat.conf").
+    lib_chan:start_server("chat.conf").
 
 start_server() ->
     register(chat_server, 

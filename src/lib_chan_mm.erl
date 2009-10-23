@@ -32,7 +32,7 @@ trace_with_tag(Pid, Tag) ->
 		    end}).
     
 loop(Socket, Pid) ->
-    trace_with_tag(self(), trace),
+    %trace_with_tag(self(), trace),
     process_flag(trap_exit, true),
     loop1(Socket, Pid, false).
 
